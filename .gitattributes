@@ -1,0 +1,14 @@
+* text=auto
+*.sh text eol=lf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.zip binary
+*.gz binary
+*.exe binary
+*.dll binary
+*.cab binary
+*.sqlite binary
