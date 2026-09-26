@@ -158,6 +158,7 @@ this downloads data and can take considerable time and space.
 Project-authored code and documentation are licensed under the
 [MIT License](LICENSE). See [license scope](LICENSE-STATUS.md) and
 [third-party credits](THIRD-PARTY.md) for components and data covered by other terms.
-![RF Traffic Monitor dashboard](images/RF_running.png)
+
 The optional EOX 2024 imagery is CC BY-NC-SA 4.0; that restriction applies to
 the imagery, not automatically to every source file in this repository.
+![RF Traffic Monitor dashboard](images/RF_running.png)
