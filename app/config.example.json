@@ -1,0 +1,22 @@
+{
+  "station_name": "My receiving station",
+  "latitude": 0.0,
+  "longitude": 0.0,
+  "map_latitude": 0.0,
+  "map_longitude": 0.0,
+  "wifi_enabled": false,
+  "wifi_model": "other",
+  "wifi_backend": "windows",
+  "wifi_adapter": "",
+  "wsl_busid": "",
+  "adsb_seconds": 60,
+  "ais_seconds": 15,
+  "device_index": 0,
+  "ppm": 0,
+  "receiver_type": "rtl",
+  "hackrf_serial": "",
+  "hackrf_lna": 16,
+  "hackrf_vga": 20,
+  "hackrf_amp": false,
+  "scan": {"adsb": true, "ais": true}
+}

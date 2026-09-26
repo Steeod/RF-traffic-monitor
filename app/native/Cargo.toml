@@ -1,0 +1,13 @@
+[package]
+name = "radar-decode"
+version = "0.3.0"
+edition = "2021"
+
+[dependencies]
+num-complex = "0.4"
+serde_json = "1"
+xng-types = { path = "../../.build/xng-0.21.0/crates/xng-types" }
+xng-mode-acars = { path = "../../.build/xng-0.21.0/crates/xng-mode-acars" }
+xng-mode-vdl2 = { path = "../../.build/xng-0.21.0/crates/xng-mode-vdl2" }
+xng-mode-hfdl = { path = "../../.build/xng-0.21.0/crates/xng-mode-hfdl" }
+xng-mode-sonde = { path = "../../.build/xng-0.21.0/crates/xng-mode-sonde" }
