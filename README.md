@@ -154,7 +154,7 @@ the optional imagery after setup, run `python tools/prepare-satellite.py`;
 this downloads data and can take considerable time and space.
 
 ## Licensing
-![RF Traffic Monitor dashboard](images/RF running.png)
+![RF Traffic Monitor dashboard](images/RF_running.png)
 Project-authored code and documentation are licensed under the
 [MIT License](LICENSE). See [license scope](LICENSE-STATUS.md) and
 [third-party credits](THIRD-PARTY.md) for components and data covered by other terms.
