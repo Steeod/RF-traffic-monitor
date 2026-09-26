@@ -1,14 +1,15 @@
 """Create a source-only folder that can be uploaded as a GitHub repository."""
+import argparse
 from pathlib import Path
 import shutil
 
 ROOT = Path(__file__).resolve().parents[1]
-DESTINATION = ROOT / 'github-upload' / 'RF-Traffic-Monitor'
+DEFAULT_DESTINATION = ROOT / 'github-upload' / 'RF-Traffic-Monitor'
 TOP_LEVEL = (
-    '.gitignore', 'DESIGN.md', 'LICENSE', 'LICENSE-STATUS.md', 'PUBLISHING.md',
+    '.gitattributes', '.gitignore', 'DESIGN.md', 'LICENSE', 'LICENSE-STATUS.md', 'PUBLISHING.md',
     'README.md', 'THIRD-PARTY.md', 'setup.ps1',
 )
-SOURCE_TREES = ('app', 'tests', 'third_party', 'tools')
+SOURCE_TREES = ('app', 'images', 'tests', 'third_party', 'tools')
 
 
 def excluded(relative: Path) -> bool:
@@ -25,12 +26,16 @@ def excluded(relative: Path) -> bool:
     return relative == Path('app/config.json')
 
 
-def main() -> None:
-    if DESTINATION.exists():
-        shutil.rmtree(DESTINATION)
-    DESTINATION.mkdir(parents=True)
+def main(destination: Path) -> None:
+    destination = destination.resolve()
+    upload_root = (ROOT / 'github-upload').resolve()
+    if destination.parent != upload_root:
+        raise ValueError(f'Destination must be directly inside {upload_root}')
+    if destination.exists():
+        shutil.rmtree(destination)
+    destination.mkdir(parents=True)
     for name in TOP_LEVEL:
-        shutil.copy2(ROOT / name, DESTINATION / name)
+        shutil.copy2(ROOT / name, destination / name)
     for tree in SOURCE_TREES:
         for source in (ROOT / tree).rglob('*'):
             if not source.is_file():
@@ -38,11 +43,14 @@ def main() -> None:
             relative = source.relative_to(ROOT)
             if excluded(relative):
                 continue
-            target = DESTINATION / relative
+            target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
-    print(DESTINATION)
+    print(destination)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--destination', type=Path, default=DEFAULT_DESTINATION)
+    args = parser.parse_args()
+    main(args.destination)

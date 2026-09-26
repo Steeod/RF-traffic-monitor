@@ -80,6 +80,8 @@ class ModelTests(unittest.TestCase):
 
 
 class BinaryTests(unittest.TestCase):
+    @unittest.skipUnless((ROOT/'app/vendor/vrs/VrsBridge.exe').is_file(),
+                         'Run setup.ps1 to build the Virtual Radar bridge.')
     def test_real_vrs_parser(self):
         line='MSG,3,1,1,40621D,1,2026/09/23,12:00:00.000,2026/09/23,12:00:00.000,,30000,,,36.3,28.2,,,0,0,0,0\n'
         run=subprocess.run([str(ROOT/'app/vendor/vrs/VrsBridge.exe'),'--stdin'],input=line,
@@ -90,6 +92,8 @@ class BinaryTests(unittest.TestCase):
         t=tracks.snapshot(101)[0]
         self.assertEqual((t['lat'],t['lon'],t['altitude']),(36.3,28.2,30000))
 
+    @unittest.skipUnless((ROOT/'app/vendor/ais/AIS-catcher.exe').is_file(),
+                         'Run setup.ps1 to provision AIS-catcher.')
     def test_real_ais_decoder(self):
         nmea='!AIVDM,1,1,,B,3776k`5000a3SLPEKnDQQWpH0000,0*78\n'
         run=subprocess.run([str(ROOT/'app/vendor/ais/AIS-catcher.exe'),'-r','txt','.','-o','5'],
@@ -101,6 +105,8 @@ class BinaryTests(unittest.TestCase):
         self.assertEqual(t['ident'],'477213600')
         self.assertAlmostEqual(t['lat'],37.460617,places=5)
 
+    @unittest.skipUnless((ROOT/'app/maps/land.json').is_file(),
+                         'Run setup.ps1 to generate the offline map.')
     def test_map_is_local_and_covers_region(self):
         data=json.loads((ROOT/'app/maps/land.json').read_text())
         west,south,east,north=data['bounds']

@@ -54,10 +54,10 @@ if (ROOT/'downloads/manifest.json').exists():
     origins=json.loads((ROOT/'downloads/manifest.json').read_text('utf-8'))
     extra={
         'rtl-v4.zip':'https://github.com/rtlsdrblog/rtl-sdr-blog/releases/download/V1.4.0/Release.zip',
-        'rtl-source.zip':'https://github.com/rtlsdrblog/rtl-sdr-blog/archive/refs/tags/V1.4.0.zip',
+        'rtl-source.zip':'https://codeload.github.com/rtlsdrblog/rtl-sdr-blog/zip/aed0ea19f3a273370a13c9009b96313c75d54c7b',
         'ais-source.zip':'https://github.com/jvde-github/AIS-catcher/archive/refs/tags/v0.70.zip',
         'dump1090-source.zip':'https://github.com/MalcolmRobb/dump1090/archive/refs/heads/master.zip',
-        'vrs-source.zip':'https://github.com/vradarserver/vrs/archive/refs/heads/master.zip',
+        'vrs-source.zip':'https://codeload.github.com/vradarserver/vrs/zip/5caf149a5077c79eeb589a1b4f8c61f3c9081b00',
         'xng-source.zip':'https://github.com/airframesio/xng/archive/refs/tags/v0.21.0.zip',
         'odid-source.zip':'https://github.com/opendroneid/opendroneid-core-c/archive/refs/heads/master.zip',
         'zadig-source.zip':'https://github.com/pbatard/libwdi/archive/refs/tags/v1.5.1.zip'}

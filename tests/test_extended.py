@@ -34,6 +34,8 @@ class ExtendedTests(unittest.TestCase):
         self.assertNotIn('<summary>Drone · Wi-Fi Remote ID',html)
         self.assertGreater(html.index('id="protocol-fields"'),decoded)
 
+    @unittest.skipUnless((ROOT/'app/vendor/drivers/alfa/awus036h/Netrtuw.inf').is_file(),
+                         'Run setup.ps1 to provision the driver packages.')
     def test_alfa_driver_profiles_are_packaged(self):
         drivers=ROOT/'app/vendor/drivers/alfa'
         h=(drivers/'awus036h/Netrtuw.inf').read_text(errors='ignore')
@@ -100,6 +102,8 @@ class ExtendedTests(unittest.TestCase):
         ingest(tracks,'vdl2',message,500)
         self.assertEqual(tracks.snapshot(500),[])
 
+    @unittest.skipUnless((ROOT/'app/vendor/native/rid_decode.dll').is_file(),
+                         'Run setup.ps1 to build the Remote ID decoder.')
     def test_remote_id_wire_packet_and_duplicates(self):
         # ASTM location layout; integer WGS84 coordinates and half-metre heights.
         packet=struct.pack('<BBBBbiiHHHBBHBB',0x12,0x20,90,20,0,
@@ -120,6 +124,8 @@ class ExtendedTests(unittest.TestCase):
         message['data']=base64.b64encode(b'\xfa\xff\x0d\x01'+bytes([0xf2,25,9])+packet).decode()
         self.assertEqual(decoder.ingest(message,222),0)
 
+    @unittest.skipUnless((ROOT/'app/vendor/native/rid_decode.dll').is_file(),
+                         'Run setup.ps1 to build the Remote ID decoder.')
     def test_wifi_beacon_remote_id_extraction(self):
         packet=struct.pack('<BBBBbiiHHHBBHBB',0x12,0x20,90,20,0,
                            362000000,281000000,2200,2240,2160,0,0,1000,0,0)

@@ -31,13 +31,13 @@
   },
   {
     "file": "zadig-2.9.exe",
-    "url": "https://zadig.akeo.ie/downloads/zadig-2.9.exe",
+    "url": "https://github.com/pbatard/libwdi/releases/download/v1.5.1/zadig-2.9.exe",
     "sha256": "4ecaa95df3da3621486a043aef8b3050b8bafe7c901402871e816229ef82039b"
   },
   {
     "file": "rtl-source.zip",
-    "url": "https://github.com/rtlsdrblog/rtl-sdr-blog/archive/refs/tags/V1.4.0.zip",
-    "sha256": "efaac50d53ea2f12d9853167ac9470bf4f04de944f17c5d52d2fd73a9ec24c18"
+    "url": "https://codeload.github.com/rtlsdrblog/rtl-sdr-blog/zip/aed0ea19f3a273370a13c9009b96313c75d54c7b",
+    "sha256": "77cc07ade5560700f9e79b868bb09275ccd84721d8a670efe6af9d6eb8c90b2d"
   },
   {
     "file": "ais-source.zip",
@@ -51,8 +51,8 @@
   },
   {
     "file": "vrs-source.zip",
-    "url": "https://github.com/vradarserver/vrs/archive/refs/heads/master.zip",
-    "sha256": "ac8cba50072468788d890658420a1a629f3a5cb5bdca1b8d719b1db8ef029898"
+    "url": "https://codeload.github.com/vradarserver/vrs/zip/5caf149a5077c79eeb589a1b4f8c61f3c9081b00",
+    "sha256": "2462f85c2f2c8b72595f770e0592d9186ca40cf60f53c9dd64eee1e1e3235780"
   },
   {
     "file": "xng-source.zip",
