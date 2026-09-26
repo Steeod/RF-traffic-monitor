@@ -1,0 +1,31 @@
+downloads/
+app/vendor/
+app/runtime/
+app/data/
+__pycache__/
+dist/
+/github-upload/
+.build/
+app/native/target/
+
+# Local copies, release archives and generated imagery
+/appxxx/
+/app.zip
+/app/maps/satellite.json
+/app/maps/satellite.sqlite*
+/app/maps/land.json
+/app/maps/places.json
+
+# Receiver settings and private runtime state
+/app/config.json
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+.venv/
+.pytest_cache/
+
+# Local reference capture output with unresolved source-data terms
+/tests/fixtures/rs41.json
