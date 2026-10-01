@@ -26,6 +26,7 @@ import webbrowser
 from model import Tracks, Schedule
 from protocols import validate_protocols, ingest
 from remote_id import RemoteID
+from rtl_devices import resolve as resolve_rtl
 
 ROOT = Path(__file__).resolve().parent
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
@@ -102,6 +103,9 @@ def validate_config(config):
     config['map_latitude']=config.get('map_latitude',config.get('latitude',0.0))
     config['map_longitude']=config.get('map_longitude',config.get('longitude',0.0))
     config['receiver_type']=config.get('receiver_type','rtl')
+    config['rtl_serial']=config.get('rtl_serial','')
+    if not isinstance(config['rtl_serial'],str) or len(config['rtl_serial'])>256 or (config['rtl_serial'] and not config['rtl_serial'].isprintable()):
+        raise ValueError('Invalid RTL-SDR serial number.')
     config['hackrf_serial']=config.get('hackrf_serial','')
     config['hackrf_lna']=config.get('hackrf_lna',16)
     config['hackrf_vga']=config.get('hackrf_vga',20)
@@ -160,6 +164,7 @@ class Controller:
         self.wifi_reason='No compatible Wi-Fi receiver was found.'
         self.wifi_seen = {}
         self.device_status = 'The device has not been checked.'
+        self.rtl_selected_serial = ''
         self.zadig_opened_automatically = False
         self.map_download=None
         self.map_download_status=''
@@ -237,10 +242,12 @@ class Controller:
     @staticmethod
     def decoder_error(proc, receiver):
         detail='\n'.join(getattr(proc,'diagnostics',())).lower()
-        if 'usb_open error -5' in detail:
+        if 'usb_open error -5' in detail or 'usb_open error -12' in detail:
             return 'RTL-SDR was found but Windows could not open it. Install WinUSB with Zadig and close any other SDR application.'
         if 'no supported' in detail:
             return 'No usable RTL-SDR was found. Connect it, install WinUSB with Zadig, and run Check receiver.'
+        if 'device does not exist' in detail or 'cannot find device with sn' in detail:
+            return 'The selected RTL-SDR is missing from this decoder\'s device list. Stop and run Check receiver.'
         if 'hackrf open: error -5' in detail:
             return 'HackRF was found but is busy or still locked. Close other SDR applications, reconnect it, and run Check receiver.'
         return f'{receiver} stopped unexpectedly. Check the USB connection, driver, antenna, and data/radar.log.'
@@ -336,6 +343,15 @@ class Controller:
         elif message.get('status')=='error':
             self.map_download_status='Map download error: '+message.get('error','unknown error')
 
+    def select_rtl(self, mode):
+        backend = mode if mode in ('adsb', 'ais') else 'native'
+        device = resolve_rtl(ROOT, backend, self.config['device_index'],
+                             self.config['rtl_serial'] or self.rtl_selected_serial)
+        self.rtl_selected_serial = device['serial']
+        self.device_status = f"RTL-SDR serial {device['serial']} · {backend} index {device['index']} · opened successfully"
+        logging.info(self.device_status)
+        return device
+
     def switch(self, mode):
         # Stop and wait for exit BEFORE any process may reopen the one physical SDR.
         with self.lock:
@@ -345,6 +361,8 @@ class Controller:
         if self.done.wait(1):
             return
         cfg = self.config
+        if cfg['receiver_type']=='rtl':
+            rtl_device = self.select_rtl(mode)
         if cfg['receiver_type']=='hackrf':
             frequencies=cfg['protocols'].get(mode,{}).get('frequencies',[1090000000 if mode=='adsb' else 162000000])
             command=[sys.executable,str(ROOT/'hackrf_worker.py'),mode,cfg['hackrf_serial'],
@@ -359,16 +377,16 @@ class Controller:
             command = [str(ROOT / 'vendor/adsb/dump1090.exe'), '--net', '--net-bind-address',
                        '127.0.0.1', '--net-http-port', '0', '--net-ri-port', '0',
                        '--net-ro-port', '0', '--net-bi-port', '0', '--net-bo-port', '0',
-                       '--net-sbs-port', '30003', '--quiet', '--device-index', str(cfg['device_index']),
+                       '--net-sbs-port', '30003', '--quiet', '--device-index', str(rtl_device['index']),
                        '--ppm', str(cfg['ppm']), '--lat', str(cfg['latitude']), '--lon', str(cfg['longitude'])]
             callback = None
         elif mode=='ais':
-            command = [str(ROOT / 'vendor/ais/AIS-catcher.exe'), '-d:' + str(cfg['device_index']),
+            command = [str(ROOT / 'vendor/ais/AIS-catcher.exe'), '-d', rtl_device['serial'],
                        '-o', '5', '-M', 'T', '-p', str(cfg['ppm']), '-gr', 'TUNER', 'auto',
                        'RTLAGC', 'on', 'BIASTEE', 'off']
             callback = lambda msg: self.received('ais', msg)
         else:
-            command=[sys.executable,str(ROOT/'rtl_worker.py'),mode,str(cfg['device_index']),str(cfg['ppm']),
+            command=[sys.executable,str(ROOT/'rtl_worker.py'),mode,str(rtl_device['index']),str(cfg['ppm']),
                      ','.join(str(f) for f in cfg['protocols'][mode]['frequencies'])]
             callback=lambda msg:self.received(mode,msg)
         with self.lock:
@@ -400,6 +418,7 @@ class Controller:
                         if self.policy != 'stopped':
                             raise ValueError('Select Stop before changing settings.')
                         self.config = validate_config(value)
+                        self.rtl_selected_serial = ''
                         path = ROOT / 'config.json'
                         temp = path.with_suffix('.tmp')
                         temp.write_text(json.dumps(value, indent=2), 'utf-8')
@@ -416,17 +435,18 @@ class Controller:
                             result=subprocess.run([sys.executable,str(ROOT/'hackrf_worker.py'),'--check'],capture_output=True,text=True,timeout=10,creationflags=NO_WINDOW)
                             self.device_status='HackRF: '+(('detected and opened successfully') if result.returncode==0 else 'could not be opened · check the connection and WinUSB')
                         else:
-                            command=[str(ROOT/'vendor/adsb/dump1090.exe'),'--quiet','--device-index',str(self.config['device_index'])]
-                            probe=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,errors='replace',creationflags=NO_WINDOW)
+                            self.rtl_selected_serial = ''
+                            modes = [m for m, enabled in self.config['scan'].items() if enabled]
+                            if any(p['enabled'] for p in self.config['protocols'].values()):modes.append('native')
+                            statuses = []
                             try:
-                                out,err=probe.communicate(timeout=1.5)
-                                probe.diagnostics=(out+'\n'+err).splitlines()
-                                self.device_status=self.decoder_error(probe,'RTL-SDR')
-                                if self.device_status.startswith('RTL-SDR was found'):
-                                    self.launch_zadig(automatic=True)
-                            except subprocess.TimeoutExpired:
-                                probe.terminate();probe.communicate(timeout=3)
-                                self.device_status='RTL-SDR opened successfully. The WinUSB driver is working.'
+                                for mode in modes or ['adsb']:
+                                    self.select_rtl(mode)
+                                    statuses.append(self.device_status)
+                                self.device_status = '; '.join(statuses)
+                            except (RuntimeError, OSError, subprocess.TimeoutExpired) as error:
+                                self.device_status = '; '.join(statuses + [str(error)])
+                                raise
                     elif action=='driver_setup':
                         self.launch_zadig()
                         self.device_status='In Zadig, select Options → List All Devices, choose only HackRF One or RTL-SDR, and select WinUSB.'
@@ -516,6 +536,7 @@ class Controller:
                             self.schedule.deadline = None
                             self.event('Demo — synthetic data' if action == 'demo' else 'Reception stopped.')
                         else:
+                            self.rtl_selected_serial = ''
                             if self.config['receiver_type']=='wifi':
                                 if action!='auto':raise ValueError('Wi-Fi-only mode supports Remote ID through Automatic cycle.')
                                 self.refresh_wifi()
@@ -683,7 +704,8 @@ class Handler(BaseHTTPRequestHandler):
                 c.command('map_download',{'latitude':float(obj['latitude']),'longitude':float(obj['longitude']),'radius':int(obj['radius'])})
             elif self.path == '/api/config':
                 required = ('station_name','wifi_model','wifi_backend','wifi_adapter','wsl_busid','latitude','longitude','map_latitude','map_longitude','adsb_seconds','ais_seconds','device_index','ppm','receiver_type','hackrf_serial','hackrf_lna','hackrf_vga','hackrf_amp','scan')
-                cfg = validate_config({**c.config,**{key: obj[key] for key in required}})
+                cfg = validate_config({**c.config,**{key: obj[key] for key in required},
+                                       'rtl_serial': obj.get('rtl_serial', c.config.get('rtl_serial', ''))})
                 if c.policy != 'stopped':
                     raise ValueError('Select Stop before changing settings.')
                 c.command('config', cfg)

@@ -23,7 +23,7 @@ def copy(path, dest=None):
     target.parent.mkdir(parents=True,exist_ok=True)
     shutil.copy2(ROOT/'app'/path,target)
 
-for name in ('Start.cmd','server.py','model.py','protocols.py','remote_id.py','rtl_worker.py','hackrf_worker.py','wifi_rid_worker.py','wsl_wifi.py','map_downloader.py','config.json','VrsBridge.cs','THIRD-PARTY.md'):
+for name in ('Start.cmd','server.py','model.py','protocols.py','remote_id.py','rtl_worker.py','rtl_devices.py','hackrf_worker.py','wifi_rid_worker.py','wsl_wifi.py','map_downloader.py','config.json','VrsBridge.cs','THIRD-PARTY.md'):
     if name=='config.json' and (OUT/name).exists():continue
     copy(name)
 for name in ('LICENSE','README.md','LICENSE-STATUS.md','THIRD-PARTY.md'):
