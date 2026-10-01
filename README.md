@@ -95,12 +95,32 @@ time and disk space.
 
 ### Driver hand-off
 
+RTL-SDR selection is automatic. The saved ADS-B index is tried first; if it
+cannot open, other detected RTL receivers are tried. AIS-catcher and the native
+decoders enumerate independently and find that same receiver by its USB serial,
+so an ADS-B index of 1 can correctly map to native index 0. Indices are not USB
+port numbers. Discovery runs when starting reception and changing radio modes.
+
+In **Receiver, station, map, and drivers**, leave **RTL-SDR serial** blank for
+automatic selection, or enter a particular receiver's serial. An explicit serial
+must match; the app will not substitute another receiver. **Check receiver**
+checks the enabled SDR backends with reception stopped and reports the resolved
+serial and each backend's own index. Native checks verify USB opening; they do
+not prove that a protocol signal can be decoded. No received messages are needed
+for discovery. Duplicate or unreadable serial numbers require connecting only
+one identifiable receiver or assigning unique serials outside this application.
+After replacing a receiver, press Stop and start again to discover it afresh.
+
+Old configurations remain supported; `rtl_serial` defaults to an empty string.
+The former proposed `native_device_index` workaround is superseded by automatic
+serial matching. Do not copy another computer's `config.json` or `data/radar.log`
+into the source repository.
+
 The setup downloads and verifies the drivers, but preserves the safety steps
 that require knowing the physical device:
 
-- **RTL-SDR or HackRF:** setup includes the signed Zadig 2.9 executable. When an
-  RTL-SDR is detected without a working WinUSB driver, RF Traffic Monitor opens
-  Zadig automatically once. In Zadig, select **Options → List All Devices**, choose
+- **RTL-SDR or HackRF:** setup includes the signed Zadig 2.9 executable. If discovery cannot open
+  an RTL-SDR because WinUSB is missing, select **Install WinUSB**. In Zadig, select **Options → List All Devices**, choose
   the RTL-SDR's first interface (normally **Bulk-In, Interface 0**) and install
   **WinUSB**. The application cannot safely make the final device selection.
 - **AWUS036H/AWUS036ACS with Windows WLAN:** when selected during setup, the

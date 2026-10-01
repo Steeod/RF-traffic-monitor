@@ -129,16 +129,23 @@ class ProcessTests(unittest.TestCase):
         c=Controller.__new__(Controller)
         import threading
         c.lock=threading.RLock();c.done=threading.Event()
-        c.config=json.loads((ROOT/'app/config.json').read_text())
+        c.config=validate_config(json.loads((ROOT/'app/config.example.json').read_text()))
+        c.rtl_selected_serial=''
         c.schedule=Schedule();c.mode='adsb';c.radio=Process();c.bridge=None
         events=[]
         def spawn(command, callback=None):
             events.append('spawn')
             self.assertEqual(events[0],'stop')
+            self.assertEqual(command[1:3], ['-d', '00000001'])
             return Process()
         c.spawn=spawn;c.event=lambda message: None
-        with patch.object(c.done,'wait',return_value=False): c.switch('ais')
-        self.assertEqual(events,['stop','spawn'])
+        def discover(*args):
+            self.assertEqual(events, ['stop'])
+            events.append('discover')
+            return {'index':0, 'serial':'00000001'}
+        with patch.object(c.done,'wait',return_value=False), patch('server.resolve_rtl',side_effect=discover):
+            c.switch('ais')
+        self.assertEqual(events,['stop','discover','spawn'])
         self.assertEqual(c.mode,'ais')
 
 

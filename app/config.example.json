@@ -12,6 +12,7 @@
   "adsb_seconds": 60,
   "ais_seconds": 15,
   "device_index": 0,
+  "rtl_serial": "",
   "ppm": 0,
   "receiver_type": "rtl",
   "hackrf_serial": "",
