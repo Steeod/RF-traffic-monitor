@@ -166,6 +166,9 @@ def materialize():
     rtl = DOWNLOADS / 'rtl-v4'
     reset_directory(rtl)
     safe_zip(DOWNLOADS / 'rtl-v4.zip', rtl)
+    # dump1090 is a 32-bit program, even on 64-bit Windows.
+    for library in (rtl / 'x86').glob('*.dll'):
+        shutil.copy2(library, adsb / library.name)
     native = ROOT / 'app/vendor/native'
     native.mkdir(parents=True, exist_ok=True)
     for library in (rtl / 'x64').glob('*.dll'):
