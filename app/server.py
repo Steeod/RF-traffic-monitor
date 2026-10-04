@@ -519,6 +519,11 @@ class Controller:
                         if not -85<=lat<=85 or not -180<=lon<=180 or radius not in (50,100,200):raise ValueError('Invalid map region.')
                         tool=ROOT/'map_downloader.py'
                         if not tool.exists():raise ValueError('The map download tool is missing from the package.')
+                        # Keep the selected region across page/application restarts.
+                        self.config['map_latitude']=lat
+                        self.config['map_longitude']=lon
+                        path=ROOT/'config.json';temp=path.with_suffix('.tmp')
+                        temp.write_text(json.dumps(self.config,indent=2),'utf-8');temp.replace(path)
                         self.map_download_status='Starting offline map download…'
                         self.map_download=self.spawn([sys.executable,str(tool),str(lat),str(lon),str(radius)],self.received_map)
                     elif action in ('auto', 'adsb', 'ais', 'acars','vdl2','hfdl','sonde','stop', 'demo'):
@@ -615,6 +620,8 @@ class Controller:
                     'wifi_hardware':self.wifi_hardware,
                     'wifi_reason':self.wifi_reason,'map_download_status':self.map_download_status,
                     'dependencies':self.dependencies(),
+                    'version':'0.10.1',
+                    'map_revision':(ROOT/'maps/satellite.json').stat().st_mtime_ns if (ROOT/'maps/satellite.json').exists() else 0,
                     'time': time.time()}
 
     def close(self):
@@ -673,6 +680,7 @@ class Handler(BaseHTTPRequestHandler):
                   '/land.json': ('maps/land.json', 'application/json')}
         routes['/satellite.json'] = ('maps/satellite.json', 'application/json')
         routes['/places.json'] = ('maps/places.json', 'application/json')
+        routes['/update_logic.js'] = ('web/update_logic.js', 'text/javascript; charset=utf-8')
         if self.path not in routes:
             return self.send(404, {'error': 'Not found'})
         path, mime = routes[self.path]
