@@ -1,120 +1,104 @@
-# GitHub publication procedure
+# Release publishing procedure
 
-## Status
+Maintainer instructions for publishing RF Traffic Monitor updates.
 
-The folder already has a Git repository, with no commits and no remote at review
-time. This preparation does not create a GitHub repository or publish anything.
-Choose the GitHub owner, repository name and visibility when uploading.
+Repository: https://github.com/Steeod/RF-traffic-monitor
 
-The first upload should be source only. `.gitignore` excludes `appxxx/`,
-`app.zip`, `dist/`, downloads, build outputs, runtime/vendor folders, receiver
-configuration, logs and all generated location/map data. It preserves local
-files. `app.zip` is about 190 MiB and the satellite database about 153 MiB;
-both exceed GitHub's ordinary 100 MiB per-file limit.
+For application downloads and installation instructions, see README.md
+and the relevant GitHub release.
 
-## Before a public upload
+## 1. Prepare the source changes
 
-1. Include the selected MIT `LICENSE` for project-authored code. Preserve
-   the third-party exceptions documented in `LICENSE-STATUS.md` and all notices.
-2. Review the candidate files for passwords, tokens, receiver serial numbers,
-   precise personal locations, captures and unpublished material. The public
-   example configuration uses neutral coordinates; `setup.ps1` creates the
-   ignored local configuration selected by each user.
-3. Review the source staging list and run the tests. Do not force-add ignored
-   folders or upload the workspace ZIP.
+- Update the application version and user-facing documentation.
+- Include all required source files and application assets.
+- Review changes against the current main branch before replacing files.
+- Exclude private configuration, receiver serials, personal coordinates,
+  logs, captures, downloaded maps and local build directories.
+- Preserve project and third-party licenses, credits and notices.
+- Run the checks appropriate to the changes.
+- Review and merge the source changes before tagging a release.
 
-## Upload using Git and the GitHub website
+## 2. Build and verify the packages
 
-Run these commands in the project root with Git and Python 3.12 installed:
+For version 0.10.2, the user-facing release assets are:
 
-```powershell
-if (!(Test-Path app/config.json)) { Copy-Item app/config.example.json app/config.json }
-Push-Location tests
-python -m unittest test_radar.ModelTests test_radar.ProcessTests -v
-Pop-Location
-git status --short
-git add --dry-run .
-# Inspect the list before staging.
-git add .
-git diff --cached --stat
-git diff --cached --check
-git diff --cached
-```
+- RFTrafficMonitor-0.10.2-Setup-win64.exe
+- RFTrafficMonitor-0.10.2-update.zip
+- SHA256SUMS-0.10.2.txt
 
-For a fully provisioned local build, also run
-`python -m unittest discover -s tests -v`; its binary/driver checks require the
-ignored vendor dependencies. Check for oversized staged files (normally this
-prints nothing):
+Use the corresponding version number for future releases.
 
-```powershell
-git ls-files | ForEach-Object {
-    $candidateFile = Get-Item -LiteralPath $_
-    if ($candidateFile.Length -gt 50MB) { $candidateFile | Select-Object FullName,Length }
-}
-```
+The source-update ZIP is for updating repository files.
+It must not be presented as the application update package.
 
-Once the content is reviewed:
+Before uploading:
 
-```powershell
-git commit -m "Initial source import"
-git branch -M main
-```
+- Verify that the Setup EXE extracts into a new or empty folder.
+- Verify that the update ZIP includes every required replacement file.
+- Test that updating preserves existing settings, maps and logs.
+- Check that packages contain neutral defaults and no personal data.
+- Verify the executable and browser icons.
+- Generate checksums after the final build.
+- Confirm that the checksums match the exact files being uploaded.
+- Record automated checks and hardware tests separately.
+- State clearly when real receiver operation remains unconfirmed.
 
-Create an **empty** repository named `rf-traffic-monitor` on
-[GitHub](https://github.com/new), select its visibility and do not initialize it
-with a README, license or gitignore. A suitable GitHub description is:
+## 3. Review third-party distribution requirements
 
-> Multi-protocol SDR monitoring for aircraft, ships, drones and radiosondes on Windows.
+These checks require supporting evidence. This document does not
+establish that every distribution requirement has been satisfied.
 
-Suggested repository topics: `sdr`, `ads-b`, `ais`, `acars`, `vdl2`, `hfdl`,
-`remote-id`, `radiosonde`, `rtl-sdr`, `hackrf`, `windows`.
+- Record exact dependency versions, immutable source references,
+  download URLs and SHA-256 values.
+- Verify correspondence between distributed binaries and their source.
+  A matching download hash alone does not establish that correspondence.
+- Supply applicable corresponding source and build information for
+  GPL components and their supporting libraries.
+- Review source availability for bundled usbipd-win packages.
+- Preserve upstream LICENSE, COPYING, COPYRIGHT and NOTICE files,
+  including notices for libacars and native runtime dependencies.
+- Establish redistribution terms before bundling third-party driver
+  binaries. A digital signature alone does not establish permission.
+- Keep Npcap installation separate.
+- Keep EOX imagery optional and retain its applicable
+  non-commercial/share-alike terms.
+- Retain OpenStreetMap attribution and applicable ODbL terms.
+- Describe the project-authored license separately from licenses
+  covering third-party software and map data.
 
-Replace OWNER below with the GitHub account or organization name:
+Consult THIRD-PARTY.md and LICENSE-STATUS.md for dependency details.
 
-```powershell
-git remote add origin https://github.com/OWNER/rf-traffic-monitor.git
-git push -u origin main
-```
+## 4. Create the GitHub release
 
-Authenticate through Git Credential Manager when prompted. Never put a token
-in the URL or commit one. The commands above assume the currently absent
-`origin`; if one has since been added, inspect `git remote -v` first.
+1. Open the repository's Releases page.
+2. Choose Draft a new release.
+3. Create a new version tag on the commit containing the reviewed changes.
+   Example: v0.10.3-beta.1.
+4. Enter a title identifying the version and its main change.
+5. Write release notes covering changes, installation, updating,
+   validation and known limitations.
+6. Attach the final Setup EXE, application update ZIP and checksum file.
+7. Select This is a pre-release for beta versions.
+8. Save the draft while completing package and distribution checks.
+9. Publish when the release is ready.
 
-Verify on GitHub that source, credits and notices are visible and that local
-configuration, logs, duplicate app copies, executables and map databases are absent.
+Keep maintainer upload instructions out of user-facing release notes.
 
-## Portable releases are a separate step
+Use a new version or beta tag for subsequent builds.
+Record package changes rather than silently replacing published binaries.
 
-The guided `setup.ps1` produces a local portable bundle. It should still be
-treated as a local build until the following release checks are completed before
-attaching any ZIP to GitHub Releases:
+## 5. Verify after publication
 
-- Verify exact binary/source version correspondence. Master/branch archive URLs
-  in existing scripts are mutable; record immutable commits, retrieval URLs and
-  SHA-256 values. A hash identifies bytes but does not prove a binary was built
-  from a particular source archive.
-- Supply the applicable corresponding source and build information for GPL
-  components, including supporting libraries. Current source ZIP checks do not
-  establish complete compliance. The WSL helper currently downloads usbipd-win's
-  MSI without its corresponding source.
-- Preserve all upstream license, copyright and NOTICE files, including libacars
-  notices within xng and notices for native runtime dependencies. Packaging file
-  filters need review so files named `COPYING` or `NOTICE` are not dropped.
-- Remove Realtek/Microsoft Catalog driver binaries unless redistribution terms
-  are established. A valid signature is not redistribution permission. Keep
-  Npcap separately installed.
-- Keep EOX imagery optional and clearly label its non-commercial/share-alike
-  terms; retain OSM attribution and ODbL terms. Do not label the whole binary/data
-  bundle as simply MIT or Apache.
-- Build through `setup.ps1` in a clean checkout. The packager recreates its
-  staging directory, but the generated ZIP intentionally contains the selected
-  station configuration and offline map. Inspect the final archive, include
-  project license/credits, run tests and test on a clean Windows machine before
-  publishing it for other users.
+- Open the public release page and test its download links.
+- Check the published filenames and downloaded file checksums.
+- Confirm that release notes reference assets actually attached.
+- Confirm that README.md links to the intended release.
+- Ensure that the tagged source includes the assets and build changes
+  used for the published packages.
+- Add a clear link to the newer release in older release notes when useful.
 
 ## References
 
-- [GitHub: adding locally hosted code](https://docs.github.com/en/migrations/importing-source-code/using-the-command-line-to-import-source-code/adding-locally-hosted-code-to-github)
-- [GitHub: large file limits and release assets](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)
+- [GitHub release management](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository)
+- [GitHub large file guidance](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github)
 - [EOX imagery terms](https://cloudless.eox.at/license-non-commercial)
-- [usbipd-win 5.3.0 license](https://github.com/dorssel/usbipd-win/blob/v5.3.0/COPYING.md)
