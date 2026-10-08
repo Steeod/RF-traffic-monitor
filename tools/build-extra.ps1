@@ -19,3 +19,5 @@ $wrapper=Join-Path $nativeSource 'rid_decode.c'
 $compat=Join-Path $nativeSource 'odid_compat.h'
 Push-Location (Join-Path $radarRoot '.build')
 try { & cmd.exe /c "`"$vs`" >nul && cl /nologo /LD /O2 /MT /FI`"$compat`" /I`"$core`" `"$wrapper`" `"$core\opendroneid.c`" /link /OUT:`"$output\rid_decode.dll`""; if($LASTEXITCODE -ne 0){throw 'OpenDroneID build failed'} } finally { Pop-Location }
+
+& (Join-Path $PSScriptRoot 'build-rtl-probe.ps1')

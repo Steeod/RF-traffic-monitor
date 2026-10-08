@@ -35,7 +35,7 @@ for folder in ('web','maps','runtime','wsl'):
 for folder in ('ais','adsb','vrs','native','drivers'):
     for f in (ROOT/'app/vendor'/folder).rglob('*'):
         if not f.is_file():continue
-        allowed=(f.suffix.lower() in ('.dll','.inf','.cat','.sys') or f.name in ('AIS-catcher.exe','dump1090.exe','VrsBridge.exe','radar-decode.exe','zadig-2.9.exe')
+        allowed=(f.suffix.lower() in ('.dll','.inf','.cat','.sys') or f.name in ('AIS-catcher.exe','rtl-probe.exe','dump1090.exe','VrsBridge.exe','radar-decode.exe','zadig-2.9.exe')
                  or 'Licenses' in f.parts or f.name.lower() in ('readme.md','readme.txt','license.txt','rtl-sdr-copying.txt'))
         if allowed:copy(f.relative_to(ROOT/'app'))
 bundle=ROOT/'downloads/wsl-bundle'
@@ -74,7 +74,7 @@ for f in (ROOT/'app/native').rglob('*'):
         target=OUT/'sources/native'/f.relative_to(ROOT/'app/native');target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(f,target)
 shutil.copy2(ROOT/'tools/build-extra.ps1',OUT/'sources/build-extra.ps1')
 shutil.copy2(ROOT/'tools/BUILD.md',OUT/'sources/BUILD.md')
-archive=ROOT/'dist/RFTrafficMonitor-0.10-win64.zip'
+archive=ROOT/'dist/RFTrafficMonitor-0.10.2-win64.zip'
 with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,compresslevel=6,strict_timestamps=False) as z:
     for f in OUT.rglob('*'):
         if f.is_file() and 'data' not in f.relative_to(OUT).parts and '__pycache__' not in f.parts:

@@ -8,7 +8,7 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-EXE = ROOT / 'dist/RFTrafficMonitor-0.10.1-Setup-win64.exe'
+EXE = ROOT / 'dist/RFTrafficMonitor-0.10.2-Setup-win64.exe'
 
 def run(exe, target):
     return subprocess.run([str(exe), '--extract', str(target)], creationflags=subprocess.CREATE_NO_WINDOW).returncode
@@ -25,6 +25,14 @@ def main():
     assert not (target / 'data').exists()
     assert not (target / 'vendor/drivers').exists()
     subprocess.run([str(target / 'runtime/python.exe'), '-c', 'import server, rtl_devices, ssl, sqlite3; from PIL import Image; import download_drivers; print("Bundled imports OK")'], check=True)
+    helper=target/'vendor/adsb/rtl-probe.exe'
+    data=helper.read_bytes()
+    pe=struct.unpack_from('<I',data,0x3c)[0]
+    assert struct.unpack_from('<H',data,pe+4)[0]==0x14c, 'Discovery helper must be x86'
+    inventory=subprocess.run([str(helper),'--list'],capture_output=True,text=True,
+                             timeout=15,creationflags=subprocess.CREATE_NO_WINDOW)
+    assert inventory.returncode==0,inventory.stderr
+    assert isinstance(json.loads(inventory.stdout),list)
     marker = target / 'keep.txt'
     marker.write_text('preserve')
     assert run(EXE, target) == 1, 'Must refuse overwriting an installation'

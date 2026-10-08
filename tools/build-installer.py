@@ -16,6 +16,7 @@ def main():
     for name in required:
         if not (ROOT / 'app' / name).is_file():
             raise RuntimeError('Missing dependency: ' + name + '; provision the app first.')
+    subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'tools/build-rtl-probe.ps1')],check=True)
     files = {}
     for path in (ROOT / 'app').rglob('*'):
         relative = path.relative_to(ROOT / 'app')
@@ -32,6 +33,8 @@ def main():
         if path.is_file(): files['sources/' + path.relative_to(ROOT / 'dist/RFTrafficMonitor/sources').as_posix()] = path
     for name in ('LICENSE', 'LICENSE-STATUS.md', 'THIRD-PARTY.md', 'README.md'):
         files[name] = ROOT / name
+    files['sources/RtlProbe.cs'] = ROOT/'tools/RtlProbe.cs'
+    files['sources/build-rtl-probe.ps1'] = ROOT/'tools/build-rtl-probe.ps1'
     files['config.json'] = ROOT / 'app/config.example.json'
     files['download_drivers.py'] = ROOT / 'tools/installer/download_drivers.py'
     files['installer_dependencies.py'] = ROOT / 'tools/bootstrap.py'
@@ -44,7 +47,7 @@ def main():
     csc = Path(os.environ['WINDIR']) / 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
     stub = BUILD / 'Setup.exe'
     subprocess.run([str(csc), '/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/out:' + str(stub), '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.IO.Compression.dll', str(ROOT / 'tools/installer/Setup.cs')], check=True)
-    output = ROOT / 'dist/RFTrafficMonitor-0.10.1-Setup-win64.exe'
+    output = ROOT / 'dist/RFTrafficMonitor-0.10.2-Setup-win64.exe'
     output.parent.mkdir(exist_ok=True)
     digest = hashlib.sha256()
     with output.open('wb') as dest:
