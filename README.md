@@ -1,6 +1,6 @@
 # RF Traffic Monitor
 
-**Monitor aircraft, vessels, radiosondes and compatible drones on Windows.**
+**Portable RF monitoring for Windows — aircraft, vessels, radiosondes and compatible drones.**
 Created by **Steeod**.
 
 RF Traffic Monitor brings signals received at your own station into a local
@@ -8,6 +8,35 @@ map and message dashboard. It supports RTL-SDR and HackRF receivers, with
 optional Wi-Fi Remote ID through a separate compatible adapter.
 
 **[Downloads and release notes](https://github.com/Steeod/RF-traffic-monitor/releases)**
+
+![RF Traffic Monitor map and target list](images/RF_demo.png)
+
+*Dashboard preview in Demo mode with synthetic targets. Choose your own station
+and map region during setup; the application is not tied to the area shown.*
+
+## Portable and local
+
+- **Portable application:** Setup extracts the application into its own
+  `RFTrafficMonitor` subfolder. Launch it with `Start.cmd`.
+- Settings, downloaded maps and application logs stay in the application folder.
+  Close the application before moving or backing up the whole folder.
+- **Windows 10/11, 64-bit.** The packaged runtime and decoders are included;
+  users do not need to install Python or development tools.
+- Receiver drivers and optional Npcap/WSL support are separate system components
+  and may need installation on each computer.
+
+## Privacy and internet use
+
+The dashboard runs on your computer at `http://127.0.0.1:8787`.
+**Received aircraft, vessel, radiosonde and drone positions and decoded messages
+are not uploaded to tracking websites, feeder networks or cloud services.**
+No account or cloud dashboard is required.
+
+Reception and previously downloaded maps work locally. Internet is used for
+online place searches (the typed place name is sent to Photon), map downloads
+(the requested map area is sent to the imagery provider), and optional driver
+package downloads. Enter coordinates manually and use existing maps to avoid
+these online setup features.
 
 ## What it supports
 
@@ -29,10 +58,6 @@ Reception depends on compatible hardware, drivers, antenna and local signals.
    receiver and map.
 4. Select the technologies to receive. One selected SDR technology runs
    continuously; multiple technologies share the SDR. Deselect all to stop.
-
-The packaged application runs on **64-bit Windows 10/11** and includes its
-runtime and decoders. Internet is needed for online place searches and new map
-downloads; the dashboard and downloaded maps run locally.
 
 ## Updates and help
 
