@@ -2,6 +2,37 @@
 
 Created by **Steeod**.
 
+## Download for Windows
+
+**Current beta: RF Traffic Monitor 0.10.2**
+
+[Open the download page](https://github.com/Steeod/RF-traffic-monitor/releases/tag/v0.10.2-beta.1)
+
+### New installation
+1. Download `RFTrafficMonitor-0.10.2-Setup-win64.exe` from the release assets.
+2. Run it and choose a new or empty folder.
+3. After extraction, launch `Start.cmd` from that folder.
+4. Set your station coordinates and download your map region.
+5. Connect your receiver and run **Check receiver**. For an RTL-SDR, test with only **ADS-B** enabled first.
+
+The package includes the application runtime; installing Python or build tools separately is not required.
+The optional driver download requires internet access. Installing the USB driver through Zadig is a separate step and requires selecting the correct receiver.
+
+### Update from 0.10 or 0.10.1
+1. Close RF Traffic Monitor and other SDR applications.
+2. Back up your application folder.
+3. Download `RFTrafficMonitor-0.10.2-update.zip`.
+4. Extract the entire ZIP into the folder containing `Start.cmd`, accepting file replacement.
+5. Launch `Start.cmd`, press **Ctrl+F5**, and run **Check receiver**.
+
+Extract the entire update: it includes `vendor/adsb/rtl-probe.exe`.
+Your settings, downloaded maps and logs are preserved.
+
+### Download checks
+`SHA256SUMS-0.10.2.txt` provides checksums for the release packages.
+GitHub's automatic **Source code (zip)** and **Source code (tar.gz)** downloads are source archives, not ready-to-run installations.
+
+This is a beta release. Reception on affected RTL-SDR V3/V4 systems still needs confirmation. The Windows executables are unsigned.
 **Multi-protocol SDR monitoring for Windows.** Track aircraft, ships, drones
 and radiosondes from radio signals received at your own station.
 
@@ -51,7 +82,7 @@ and antennas.
 
 `setup.ps1` turns this source checkout into a complete local portable build.
 
-## Guided Windows setup
+## Build from source — developers
 
 On a 64-bit Windows 10 or 11 computer, clone the repository and run:
 
