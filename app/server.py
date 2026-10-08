@@ -679,6 +679,7 @@ class Handler(BaseHTTPRequestHandler):
                   '/style.css': ('web/style.css', 'text/css; charset=utf-8'),
                   '/land.json': ('maps/land.json', 'application/json')}
         routes['/satellite.json'] = ('maps/satellite.json', 'application/json')
+        routes['/favicon.ico'] = ('web/rft-icon.ico', 'image/x-icon')
         routes['/places.json'] = ('maps/places.json', 'application/json')
         routes['/update_logic.js'] = ('web/update_logic.js', 'text/javascript; charset=utf-8')
         if self.path not in routes:

@@ -12,6 +12,10 @@ an explicitly selected serial never falls back to another receiver. Automatic
 selection can try another receiver if the preferred one is busy. Previous map
 and V4 library fixes are included.
 
+The Setup EXE, setup window and browser tab now use the approved blue RFT
+particle-wave icon. The icon refresh changes package checksums; use the newly
+generated SHA256SUMS-0.10.2.txt together with these packages.
+
 ## Existing users (0.10 or 0.10.1)
 
 1. Exit RF Traffic Monitor and close other SDR applications.
@@ -53,6 +57,7 @@ Fixes ADS-B receiver discovery when dump1090 opens the receiver but its
 device-list text is unavailable to the application.
 
 ### Changes
+- New blue RFT particle-wave icon for Setup and the browser tab.
 - New 32-bit RTL discovery helper reads USB device identities directly.
 - No dependency on dump1090 console output or its discovery timeout.
 - Detailed discovery output and errors are recorded in data/radar.log.

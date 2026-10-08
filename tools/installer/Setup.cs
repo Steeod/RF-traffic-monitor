@@ -23,6 +23,7 @@ class Setup : Form {
         Application.EnableVisualStyles(); Application.Run(new Setup()); return 0;
     }
     Setup() {
+        Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
         Text = "RF Traffic Monitor Setup"; ClientSize = new Size(600, 260);
         FormBorderStyle = FormBorderStyle.FixedDialog; MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
