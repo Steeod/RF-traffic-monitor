@@ -1,7 +1,7 @@
 # Self-extracting Windows setup
 
 Run `python tools/build-installer.py` from a provisioned checkout on Windows.
-Output: `dist/RFTrafficMonitor-0.10.1-Setup-win64.exe` and its SHA-256 file.
+Output: `dist/RFTrafficMonitor-0.10.2-Setup-win64.exe` and its SHA-256 file.
 The build uses the Windows .NET Framework C# compiler, current `app/` files,
 and the existing portable bundle's source archives and optional WSL bundle.
 No extra installer toolchain is required. Target: 64-bit Windows 10/11.

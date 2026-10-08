@@ -19,29 +19,54 @@ class DiscoveryTests(unittest.TestCase):
     def test_empty_serial_does_not_consume_the_next_output_line(self):
         self.assertEqual(rtl.dump_devices('0: R, SDR, SN: \nUsing device 0: RTL-SDR\n'), [])
 
-    @patch.object(rtl, 'probe')
-    def test_dump_falls_back_from_unusable_zero_to_one(self, probe):
-        probe.side_effect = [(False, LIST), (True, LIST)]
-        self.assertEqual(rtl.resolve(Path('/app'), 'adsb')['index'], 1)
-        self.assertEqual(probe.call_args.args[0][-1], '1')
+    @patch.object(rtl, 'run_helper')
+    def test_adsb_uses_structured_inventory_not_decoder_output(self, helper):
+        device={'index':0,'serial':'00000001'}
+        helper.side_effect=[[device],device]
+        self.assertEqual(rtl.resolve(Path('/app'),'adsb'),device)
+        self.assertTrue(str(helper.call_args.args[0]).endswith('rtl-probe.exe'))
+        self.assertEqual(helper.call_args.args[1][:2],['--open','0'])
 
-    @patch.object(rtl, 'probe')
-    def test_busy_preferred_receiver_falls_back(self, probe):
-        devices = '0: Realtek, SDR, SN: A\n1: Realtek, SDR, SN: B\n'
-        probe.side_effect = [(False, devices), (True, devices)]
-        self.assertEqual(rtl.resolve(Path('/app'), 'adsb')['serial'], 'B')
+    @patch.object(rtl, 'run_helper')
+    def test_busy_preferred_receiver_falls_back(self, helper):
+        a={'index':0,'serial':'A'};b={'index':1,'serial':'B'}
+        helper.side_effect=[[a,b],RuntimeError('busy'),b]
+        self.assertEqual(rtl.resolve(Path('/app'),'adsb'),b)
 
-    @patch.object(rtl, 'probe')
-    def test_explicit_missing_serial_never_selects_another_receiver(self, probe):
-        probe.return_value = (True, LIST)
-        with self.assertRaisesRegex(RuntimeError, 'not found'):
-            rtl.resolve(Path('/app'), 'adsb', serial='missing')
+    @patch.object(rtl, 'run_helper')
+    def test_explicit_missing_serial_never_selects_another_receiver(self, helper):
+        helper.return_value=[{'index':0,'serial':'A'}]
+        with self.assertRaisesRegex(RuntimeError,'not found'):
+            rtl.resolve(Path('/app'),'adsb',serial='B')
+        self.assertEqual(helper.call_count,1)
 
-    @patch.object(rtl, 'probe')
-    def test_duplicate_serial_is_rejected(self, probe):
-        probe.return_value = (True, '0: R, SDR, SN: A\n1: R, SDR, SN: A\n')
-        with self.assertRaisesRegex(RuntimeError, 'ambiguous'):
-            rtl.resolve(Path('/app'), 'adsb')
+    @patch.object(rtl, 'run_helper')
+    def test_duplicate_serial_is_rejected(self, helper):
+        helper.return_value=[{'index':0,'serial':'A'},{'index':1,'serial':'A'}]
+        with self.assertRaisesRegex(RuntimeError,'ambiguous'):
+            rtl.resolve(Path('/app'),'adsb')
+
+    @patch.object(rtl.subprocess, 'run')
+    def test_helper_logs_failure_before_raising(self, run):
+        run.return_value=Mock(returncode=1,stdout='',stderr='USB access denied')
+        with self.assertLogs(level='INFO') as logs:
+            with self.assertRaisesRegex(RuntimeError,'USB access denied'):
+                rtl.run_helper(Path('/app/rtl-probe.exe'),['--list'])
+        self.assertIn('USB access denied',' '.join(logs.output))
+
+    @patch.object(rtl.subprocess, 'run')
+    def test_helper_timeout_is_reported(self, run):
+        run.side_effect=subprocess.TimeoutExpired('probe',15,output=b'partial',stderr=b'detail')
+        with self.assertLogs(level='ERROR') as logs:
+            with self.assertRaisesRegex(RuntimeError,'timed out'):
+                rtl.run_helper(Path('/app/rtl-probe.exe'),['--list'])
+        self.assertIn('partial',' '.join(logs.output))
+
+    @patch.object(rtl.subprocess, 'run')
+    def test_helper_rejects_malformed_inventory(self, run):
+        run.return_value=Mock(returncode=0,stdout='[{"index":0}]',stderr='')
+        with self.assertRaisesRegex(RuntimeError,'Invalid RTL'):
+            rtl.run_helper(Path('/app/rtl-probe.exe'),['--list'])
 
     @patch.object(rtl.subprocess, 'run')
     @patch.object(rtl, 'probe')
@@ -86,16 +111,16 @@ class DiscoveryTests(unittest.TestCase):
         library.rtlsdr_close.assert_called_once()
         self.assertEqual(library.rtlsdr_close.call_args.args[0].value, 123)
 
-    @patch.object(rtl, 'probe')
+    @patch.object(rtl, 'run_helper')
     def test_explicit_busy_receiver_does_not_fall_back(self, probe):
-        probe.return_value = (False, '0: R, SDR, SN: A\n1: R, SDR, SN: B\n')
+        probe.side_effect = [[{'index':0,'serial':'A'},{'index':1,'serial':'B'}],RuntimeError('busy')]
         with self.assertRaisesRegex(RuntimeError, 'could be opened'):
             rtl.resolve(Path('/app'), 'adsb', serial='A')
-        probe.assert_called_once()
+        self.assertEqual(probe.call_count,2)
 
-    @patch.object(rtl, 'probe')
+    @patch.object(rtl, 'run_helper')
     def test_no_devices_produces_actionable_error(self, probe):
-        probe.return_value = (False, 'No supported devices found.')
+        probe.return_value = []
         with self.assertRaisesRegex(RuntimeError, 'Reconnect'):
             rtl.resolve(Path('/app'), 'adsb')
 

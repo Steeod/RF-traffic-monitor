@@ -620,7 +620,7 @@ class Controller:
                     'wifi_hardware':self.wifi_hardware,
                     'wifi_reason':self.wifi_reason,'map_download_status':self.map_download_status,
                     'dependencies':self.dependencies(),
-                    'version':'0.10.1',
+                    'version':'0.10.2',
                     'map_revision':(ROOT/'maps/satellite.json').stat().st_mtime_ns if (ROOT/'maps/satellite.json').exists() else 0,
                     'time': time.time()}
 
