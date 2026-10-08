@@ -9,6 +9,7 @@ const UpdateLogic = {
       ? [next.latitude, next.longitude] : [next.map_latitude, next.map_longitude];
   },
   initialCenter(config, manifest) {
+    if (config.setup_complete) return [config.map_latitude, config.map_longitude];
     if (config.map_latitude !== 0 || config.map_longitude !== 0) return [config.map_latitude, config.map_longitude];
     if (config.latitude !== 0 || config.longitude !== 0) return [config.latitude, config.longitude];
     if (manifest?.center) return manifest.center;

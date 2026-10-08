@@ -16,8 +16,8 @@ from wifi_rid_worker import frames,vendor_messages,DLT_IEEE802_11_RADIO
 class ExtendedTests(unittest.TestCase):
     def test_scan_controls_are_directly_below_mode_buttons(self):
         html=(ROOT/'app/web/index.html').read_text('utf-8')
-        controls=html.index('id="auto"')
-        scans=html.index('Scanning options with ✓')
+        controls=html.index('id="technology-buttons"')
+        scans=html.index('Reception options and Wi-Fi status')
         error=html.index('id="error"')
         self.assertLess(controls,scans);self.assertLess(scans,error)
         self.assertNotIn('manual-mode',html);self.assertNotIn('listen-extra',html)

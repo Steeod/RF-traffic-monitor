@@ -17,6 +17,7 @@ def main():
         if not (ROOT / 'app' / name).is_file():
             raise RuntimeError('Missing dependency: ' + name + '; provision the app first.')
     subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'tools/build-rtl-probe.ps1')],check=True)
+    subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'tools/build-bridge.ps1')],check=True)
     files = {}
     for path in (ROOT / 'app').rglob('*'):
         relative = path.relative_to(ROOT / 'app')
@@ -47,7 +48,7 @@ def main():
     csc = Path(os.environ['WINDIR']) / 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
     stub = BUILD / 'Setup.exe'
     subprocess.run([str(csc), '/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/win32icon:' + str(ROOT/'app/web/rft-icon.ico'), '/out:' + str(stub), '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.IO.Compression.dll', str(ROOT / 'tools/installer/Setup.cs')], check=True)
-    output = ROOT / 'dist/RFTrafficMonitor-0.10.2-Setup-win64.exe'
+    output = ROOT / 'dist/RFTrafficMonitor-0.10.3-Setup-win64.exe'
     output.parent.mkdir(exist_ok=True)
     digest = hashlib.sha256()
     with output.open('wb') as dest:
