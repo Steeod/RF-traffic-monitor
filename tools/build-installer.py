@@ -46,7 +46,7 @@ def main():
         if 'maps/places.json' not in files: archive.writestr('maps/places.json', '{"places":[]}')
     csc = Path(os.environ['WINDIR']) / 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
     stub = BUILD / 'Setup.exe'
-    subprocess.run([str(csc), '/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/out:' + str(stub), '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.IO.Compression.dll', str(ROOT / 'tools/installer/Setup.cs')], check=True)
+    subprocess.run([str(csc), '/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/win32icon:' + str(ROOT/'app/web/rft-icon.ico'), '/out:' + str(stub), '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.IO.Compression.dll', str(ROOT / 'tools/installer/Setup.cs')], check=True)
     output = ROOT / 'dist/RFTrafficMonitor-0.10.2-Setup-win64.exe'
     output.parent.mkdir(exist_ok=True)
     digest = hashlib.sha256()

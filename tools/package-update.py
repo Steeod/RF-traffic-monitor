@@ -5,7 +5,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT=ROOT/'dist'
-PATCH=('server.py','rtl_devices.py','web/app.js','web/index.html','web/update_logic.js',
+PATCH=('web/rft-icon.png','web/rft-icon.ico','server.py','rtl_devices.py','web/app.js','web/index.html','web/update_logic.js',
        'vendor/adsb/rtl-probe.exe','vendor/adsb/rtlsdr.dll','vendor/adsb/msvcr100.dll','vendor/adsb/pthreadVC2.dll')
 SOURCE=('tools/RtlProbe.cs','tools/build-rtl-probe.ps1','tools/build-extra.ps1','tools/package.py','tests/test_rtl_devices.py','tools/bootstrap.py','tools/build-installer.py','tools/package-update.py',
         'tools/installer/Setup.cs','tools/installer/download_drivers.py',
