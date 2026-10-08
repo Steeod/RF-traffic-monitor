@@ -9,10 +9,11 @@ optional Wi-Fi Remote ID through a separate compatible adapter.
 
 **[Downloads and release notes](https://github.com/Steeod/RF-traffic-monitor/releases)**
 
-![RF Traffic Monitor map and target list](images/RF_demo.png)
+![RF Traffic Monitor interface with illustrative aircraft and vessel targets](images/RF_preview.png)
 
-*Dashboard preview in Demo mode with synthetic targets. Choose your own station
-and map region during setup; the application is not tied to the area shown.*
+*Illustrative product preview: aircraft and vessel markers were added for presentation;
+they are not a recording of live reception. All technology buttons are visible.
+Choose your own station and map region during setup.*
 
 ## Portable and local
 
