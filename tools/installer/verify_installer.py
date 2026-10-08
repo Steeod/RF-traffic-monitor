@@ -8,7 +8,7 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-EXE = ROOT / 'dist/RFTrafficMonitor-0.10.2-Setup-win64.exe'
+EXE = ROOT / 'dist/RFTrafficMonitor-0.10.3-Setup-win64.exe'
 
 def run(exe, target):
     return subprocess.run([str(exe), '--extract', str(target)], creationflags=subprocess.CREATE_NO_WINDOW).returncode
@@ -38,6 +38,19 @@ def main():
     assert run(EXE, target) == 1, 'Must refuse overwriting an installation'
     assert marker.read_text() == 'preserve'
     stub = (ROOT / '.build/installer/Setup.exe').read_bytes()
+    # The exact same default-path function is used by the GUI and this check.
+    local = work / 'beside-setup'; local.mkdir()
+    (local/'notes.txt').write_text('preserve')
+    tiny = work/'tiny.zip'
+    with zipfile.ZipFile(tiny, 'w') as archive: archive.writestr('web/test.txt', 'installed')
+    data = tiny.read_bytes()
+    local_exe = local/'Setup.exe'
+    local_exe.write_bytes(stub + data + b'RFTMSFX1' + struct.pack('<q', len(data)) + hashlib.sha256(data).digest())
+    assert subprocess.run([str(local_exe),'--extract-default'], creationflags=subprocess.CREATE_NO_WINDOW).returncode == 0
+    assert (local/'RFTrafficMonitor/web/test.txt').read_text() == 'installed'
+    assert not (local/'web').exists(), 'Do not scatter application files beside Setup'
+    assert (local/'notes.txt').read_text() == 'preserve'
+    assert subprocess.run([str(local_exe),'--extract-default'], creationflags=subprocess.CREATE_NO_WINDOW).returncode == 1, 'Existing payload paths must be rejected'
     malicious = work / 'malicious.zip'
     with zipfile.ZipFile(malicious, 'w') as archive: archive.writestr('../outside.txt', 'escape')
     payload = malicious.read_bytes()

@@ -27,6 +27,7 @@ from model import Tracks, Schedule
 from protocols import validate_protocols, ingest
 from remote_id import RemoteID
 from rtl_devices import resolve as resolve_rtl
+from geocoding import search_places
 
 ROOT = Path(__file__).resolve().parent
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
@@ -94,6 +95,9 @@ class Job:
 
 
 def validate_config(config):
+    config.setdefault('setup_complete', any(config.get(k, 0) != 0 for k in ('latitude','longitude','map_latitude','map_longitude')))
+    if type(config['setup_complete']) is not bool:
+        raise ValueError('Invalid setup completion flag.')
     config['station_name']=config.get('station_name','Receiving station')
     config['wifi_model']=config.get('wifi_model','awus036h')
     config['wifi_backend']=config.get('wifi_backend','windows')
@@ -131,7 +135,7 @@ def validate_config(config):
     if any(type(config[k]) is not int for k in ('adsb_seconds', 'ais_seconds')):
         raise ValueError('Reception times must be whole seconds.')
     config['protocols']=validate_protocols(config.get('protocols'))
-    Schedule(config['adsb_seconds'], config['ais_seconds'],config['protocols'],config['scan'],config['receiver_type']=='wifi')
+    Schedule(config['adsb_seconds'], config['ais_seconds'],config['protocols'],config['scan'],True)
     if not -85 <= float(config['latitude']) <= 85 or not -180 <= float(config['longitude']) <= 180:
         raise ValueError('Invalid station location.')
     if not -85 <= float(config['map_latitude']) <= 85 or not -180 <= float(config['map_longitude']) <= 180:
@@ -147,7 +151,7 @@ class Controller:
     def __init__(self):
         self.config = validate_config(json.loads((ROOT / 'config.json').read_text('utf-8-sig')))
         self.tracks = Tracks()
-        self.schedule = Schedule(self.config['adsb_seconds'], self.config['ais_seconds'],self.config['protocols'],self.config['scan'],self.config['receiver_type']=='wifi')
+        self.schedule = Schedule(self.config['adsb_seconds'], self.config['ais_seconds'],self.config['protocols'],self.config['scan'],True)
         self.commands = queue.Queue()
         self.done = threading.Event()
         self.lock = threading.RLock()
@@ -176,6 +180,8 @@ class Controller:
         self.events = collections.deque(maxlen=30)
         self.last_message = {k:None for k in ('adsb','ais','acars','vdl2','hfdl','sonde','remoteid')}
         self.counts = dict.fromkeys(self.last_message,0)
+        self.last_scan_request = None
+        self.diagnostic_time = time.monotonic()
         self.thread = threading.Thread(target=self.run, daemon=True)
         self.refresh_wifi()
         self.thread.start()
@@ -406,6 +412,52 @@ class Controller:
     def command(self, action, value=None):
         self.commands.put((action, value))
 
+    def toggle_scan(self, mode, enabled):
+        # Commands are serialized on the controller thread, so rapid clicks cannot
+        # overwrite a previous selection with an old browser snapshot.
+        cfg = json.loads(json.dumps(self.config))
+        if self.policy != 'auto':
+            cfg['scan'] = {'adsb': False, 'ais': False}
+            for protocol in cfg['protocols'].values(): protocol['enabled'] = False
+            cfg['wifi_enabled'] = False
+        if mode == 'wifi':
+            if enabled and not self.wifi_available: raise ValueError(self.wifi_reason)
+            cfg['wifi_enabled'] = enabled
+        else:
+            if enabled and cfg['receiver_type'] == 'wifi': raise ValueError('Select an SDR receiver in Settings first.')
+            if mode in cfg['scan']: cfg['scan'][mode] = enabled
+            else: cfg['protocols'][mode]['enabled'] = enabled
+        cfg = validate_config(cfg)
+        schedule = Schedule(cfg['adsb_seconds'], cfg['ais_seconds'], cfg['protocols'], cfg['scan'], True)
+        modes = schedule.cycle()
+        previous = self.mode
+        if self.policy == 'demo': self.tracks.clear()
+        self.config = cfg
+        path = ROOT / 'config.json'
+        temp = path.with_suffix('.tmp')
+        temp.write_text(json.dumps(cfg, indent=2), 'utf-8'); temp.replace(path)
+        self.schedule = schedule
+        self.error = ''
+        self.policy = 'auto' if modes or cfg['wifi_enabled'] else 'stopped'
+        if modes:
+            if previous in modes and self.radio and self.radio.poll() is None:
+                schedule.start(previous, time.monotonic())
+            else:
+                self.switch(modes[0])
+        else:
+            self.stop_process(self.radio); self.stop_process(self.bridge)
+            self.radio = self.bridge = None
+            self.mode = 'wifi' if cfg['wifi_enabled'] else 'stop'
+        if cfg['wifi_enabled']:
+            if self.wifi is None or self.wifi.poll() is not None:
+                command = [sys.executable,str(ROOT/'wsl_wifi.py'),'--capture'] if cfg['wifi_backend']=='wsl' else [sys.executable,str(ROOT/'wifi_rid_worker.py'),*(['--wlan-scan'] if cfg['wifi_backend']=='windows' else [cfg['wifi_adapter']])]
+                self.wifi = self.spawn(command, self.received_remote)
+                self.remote_status = 'Wi-Fi Remote ID active'
+        else:
+            self.stop_process(self.wifi); self.wifi = None
+            self.remote_status = 'Wi-Fi Remote ID inactive'
+        self.event('Selected reception: ' + (', '.join(dict.fromkeys(modes + (['wifi'] if cfg['wifi_enabled'] else []))) or 'stopped'))
+
     def run(self):
         try:
             while not self.done.is_set():
@@ -414,7 +466,12 @@ class Controller:
                 except queue.Empty:
                     action = None
                 try:
-                    if action == 'config':
+                    if action == 'scan_toggle':
+                        try:
+                            self.toggle_scan(value['mode'], value['enabled'])
+                        finally:
+                            self.last_scan_request = value.get('request_id')
+                    elif action == 'config':
                         if self.policy != 'stopped':
                             raise ValueError('Select Stop before changing settings.')
                         self.config = validate_config(value)
@@ -423,7 +480,7 @@ class Controller:
                         temp = path.with_suffix('.tmp')
                         temp.write_text(json.dumps(value, indent=2), 'utf-8')
                         temp.replace(path)
-                        self.schedule = Schedule(value['adsb_seconds'], value['ais_seconds'],value['protocols'],value['scan'],value['receiver_type']=='wifi')
+                        self.schedule = Schedule(value['adsb_seconds'], value['ais_seconds'],value['protocols'],value['scan'],True)
                         self.refresh_wifi()
                         self.event('Settings saved.')
                     elif action=='device_check':
@@ -573,6 +630,9 @@ class Controller:
                     if self.wifi and self.wifi.poll() is not None:
                         self.remote_status='Wi-Fi capture stopped. Check Npcap, monitor mode, and data/radar.log.'
                         self.wifi=None
+                    if time.monotonic() - self.diagnostic_time >= 30:
+                        self.diagnostic_time = time.monotonic()
+                        logging.info('Reception health: policy=%s mode=%s decoder_alive=%s bridge_alive=%s messages=%s', self.policy, self.mode, bool(self.radio and self.radio.poll() is None), bool(self.bridge and self.bridge.poll() is None), self.counts)
                 except Exception as error:
                     self.error = str(error)
                     self.event(self.error)
@@ -582,6 +642,7 @@ class Controller:
                     self.stop_process(self.radio)
                     self.stop_process(self.bridge)
                     self.radio = self.bridge = None
+                    self.stop_process(self.wifi); self.wifi = None
         finally:
             self.stop_process(self.radio)
             self.stop_process(self.bridge)
@@ -590,6 +651,16 @@ class Controller:
     def demo(self):
         t = time.time()
         base_lat=self.config['map_latitude'];base_lon=self.config['map_longitude']
+        if not self.config.get('setup_complete') and base_lat == 0 and base_lon == 0:
+            base_lat, base_lon = self.config['latitude'], self.config['longitude']
+            if base_lat == 0 and base_lon == 0:
+                try:
+                    manifest = json.loads((ROOT/'maps/satellite.json').read_text('utf-8'))
+                    if 'center' in manifest: base_lat, base_lon = manifest['center']
+                    elif 'region' in manifest:
+                        west,south,east,north = manifest['region']
+                        base_lat,base_lon = (south+north)/2,(west+east)/2
+                except (OSError, ValueError, KeyError): pass
         for i, (lat, lon) in enumerate(((base_lat+.35,base_lon+.4),(base_lat-.4,base_lon-.5),(base_lat+.65,base_lon-.45))):
             self.tracks.update('aircraft', 'DEMO' + str(i), {
                 'lat': lat + math.sin(t / 180 + i) * .15,
@@ -610,6 +681,7 @@ class Controller:
                 remaining = max(0, math.ceil(self.schedule.deadline - time.monotonic()))
             cycle=[{'mode':mode,'seconds':self.schedule.seconds[mode]} for mode in self.schedule.cycle()]
             return {'mode': self.mode, 'policy': self.policy, 'remaining': remaining, 'cycle':cycle,
+                    'last_scan_request':self.last_scan_request,
                     'error': self.error, 'config': dict(self.config), 'token': self.token,
                     'tracks': self.tracks.snapshot(), 'events': list(self.events),
                     'last_message': dict(self.last_message), 'counts': dict(self.counts),
@@ -620,7 +692,7 @@ class Controller:
                     'wifi_hardware':self.wifi_hardware,
                     'wifi_reason':self.wifi_reason,'map_download_status':self.map_download_status,
                     'dependencies':self.dependencies(),
-                    'version':'0.10.2',
+                    'version':'0.10.3',
                     'map_revision':(ROOT/'maps/satellite.json').stat().st_mtime_ns if (ROOT/'maps/satellite.json').exists() else 0,
                     'time': time.time()}
 
@@ -682,6 +754,7 @@ class Handler(BaseHTTPRequestHandler):
         routes['/favicon.ico'] = ('web/rft-icon.ico', 'image/x-icon')
         routes['/places.json'] = ('maps/places.json', 'application/json')
         routes['/update_logic.js'] = ('web/update_logic.js', 'text/javascript; charset=utf-8')
+        routes['/startup.js'] = ('web/startup.js', 'text/javascript; charset=utf-8')
         if self.path not in routes:
             return self.send(404, {'error': 'Not found'})
         path, mime = routes[self.path]
@@ -707,14 +780,24 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < length <= 4096:
                 raise ValueError('Invalid body size')
             obj = json.loads(self.rfile.read(length))
-            if self.path == '/api/command' and obj['action'] in ('auto','remote_on','remote_off','wifi_list','wifi_check','alfa_driver_setup','wsl_host_setup','wsl_bind','wsl_attach','wsl_detach','wsl_driver_setup','clear_background','device_check','driver_setup','stop','demo'):
+            if self.path == '/api/place-search':
+                try:
+                    return self.send(200, {'results': search_places(obj.get('query'))})
+                except LookupError as error:
+                    return self.send(503, {'error': str(error)})
+            elif self.path == '/api/scan-toggle':
+                if obj.get('mode') not in ('adsb','ais','acars','vdl2','hfdl','sonde','wifi') or type(obj.get('enabled')) is not bool:
+                    raise ValueError('Invalid reception selection.')
+                c.command('scan_toggle', obj)
+            elif self.path == '/api/command' and obj['action'] in ('auto','remote_on','remote_off','wifi_list','wifi_check','alfa_driver_setup','wsl_host_setup','wsl_bind','wsl_attach','wsl_detach','wsl_driver_setup','clear_background','device_check','driver_setup','stop','demo'):
                 c.command(obj['action'],obj.get('model'))
             elif self.path=='/api/map-download':
                 c.command('map_download',{'latitude':float(obj['latitude']),'longitude':float(obj['longitude']),'radius':int(obj['radius'])})
             elif self.path == '/api/config':
                 required = ('station_name','wifi_model','wifi_backend','wifi_adapter','wsl_busid','latitude','longitude','map_latitude','map_longitude','adsb_seconds','ais_seconds','device_index','ppm','receiver_type','hackrf_serial','hackrf_lna','hackrf_vga','hackrf_amp','scan')
                 cfg = validate_config({**c.config,**{key: obj[key] for key in required},
-                                       'rtl_serial': obj.get('rtl_serial', c.config.get('rtl_serial', ''))})
+                                       'rtl_serial': obj.get('rtl_serial', c.config.get('rtl_serial', '')),
+                                       'setup_complete': obj.get('setup_complete', c.config.get('setup_complete', False))})
                 if c.policy != 'stopped':
                     raise ValueError('Select Stop before changing settings.')
                 c.command('config', cfg)

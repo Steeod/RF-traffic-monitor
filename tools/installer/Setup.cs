@@ -15,7 +15,14 @@ class Setup : Form {
     ProgressBar progress = new ProgressBar();
     Label status = new Label();
     bool busy;
+    static string DefaultTarget() {
+        return Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "RFTrafficMonitor");
+    }
     [STAThread] static int Main(string[] args) {
+        if (args.Length == 1 && args[0] == "--extract-default") {
+            try { Extract(DefaultTarget(), delegate(int p) {}); return 0; }
+            catch (Exception e) { File.WriteAllText(DefaultTarget() + ".error.txt", e.ToString()); return 1; }
+        }
         if (args.Length == 2 && args[0] == "--extract") {
             try { Extract(args[1], delegate(int p) {}); return 0; }
             catch (Exception e) { File.WriteAllText(args[1] + ".error.txt", e.ToString()); return 1; }
@@ -28,9 +35,9 @@ class Setup : Form {
         FormBorderStyle = FormBorderStyle.FixedDialog; MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
         var title = new Label { Text = "Install RF Traffic Monitor", Left = 20, Top = 20, Width = 550, Font = new Font(SystemFonts.DefaultFont.FontFamily, 14) };
-        var hint = new Label { Text = "Choose a new or empty folder. All application files stay in this folder.", Left = 20, Top = 55, Width = 560 };
+        var hint = new Label { Text = "Creates an RFTrafficMonitor subfolder beside Setup. You can choose another folder.", Left = 20, Top = 55, Width = 560 };
         folder.SetBounds(20, 85, 455, 25);
-        folder.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RFTrafficMonitor");
+        folder.Text = DefaultTarget();
         browse.Text = "Browse..."; browse.SetBounds(485, 83, 95, 28);
         browse.Click += delegate { using (var d = new FolderBrowserDialog()) { d.Description = "Choose an empty installation folder"; if (d.ShowDialog() == DialogResult.OK) folder.Text = d.SelectedPath; } };
         drivers.Text = "Download USB / Alfa driver packages (internet required)"; drivers.Checked = true; drivers.SetBounds(20, 120, 560, 25);
@@ -65,8 +72,8 @@ class Setup : Form {
         worker.RunWorkerAsync();
     }
     static void CheckTarget(string target) {
-        if (File.Exists(target) || (Directory.Exists(target) && Directory.GetFileSystemEntries(target).Length != 0))
-            throw new IOException("Select a new or empty folder to preserve existing settings and files.");
+        if (File.Exists(target) || File.Exists(Path.Combine(target, "config.json")) || File.Exists(Path.Combine(target, "Start.cmd")))
+            throw new IOException("An installation already exists here. Use the update ZIP or select another folder.");
     }
     static void Extract(string target, Action<int> report) {
         target = Path.GetFullPath(target); CheckTarget(target);
@@ -92,6 +99,8 @@ class Setup : Form {
                 foreach (var entry in zip.Entries) {
                     string path = Path.GetFullPath(Path.Combine(target, entry.FullName));
                     if (!path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) || entry.FullName.Contains(":")) throw new IOException("Unsafe payload path.");
+                    string top = Path.Combine(target, entry.FullName.Replace('/', Path.DirectorySeparatorChar).Split(Path.DirectorySeparatorChar)[0]);
+                    if (File.Exists(top) || Directory.Exists(top)) throw new IOException("An application path already exists: " + top + ". Choose another folder; existing files were not changed.");
                 }
                 Directory.CreateDirectory(target); int done = 0;
                 foreach (var entry in zip.Entries) {

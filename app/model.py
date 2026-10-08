@@ -116,7 +116,7 @@ class Schedule:
 
     def start(self, mode, now):
         self.mode = mode
-        self.deadline = now + self.seconds[mode]
+        self.deadline = now + self.seconds[mode] if len(set(self.cycle())) > 1 else None
 
     def due(self, now):
         return self.deadline is not None and now >= self.deadline
